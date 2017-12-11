@@ -11,8 +11,14 @@ class Run():
         self.name = name
         self.run_type = run_type
         self.events = []
-
         
+    def __eq__(self, other):
+        return self.name.lower() == other.name.lower()
+
+    def __neq__(self, other):
+        return not self.__eq__(other)
+
+
 class Event():
     def __init__(self, ev_id, data_file_path):
         self.path = data_file_path
@@ -122,7 +128,8 @@ class Event():
         t.fit(self)
         self.add_track(t)
         return t
-        
+
+
 class Hit():
     def __init__(self, x, y):
         self.x = x
