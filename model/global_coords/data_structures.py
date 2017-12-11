@@ -6,6 +6,13 @@ from model.color_set import get_color
 from model.track_parameters import track_params_dict
 from scipy.ndimage.morphology import binary_hit_or_miss
 
+class Run():
+    def __init__(self, name, run_type='unknown'):
+        self.name = name
+        self.run_type = run_type
+        self.events = []
+
+        
 class Event():
     def __init__(self, ev_id, data_file_path):
         self.path = data_file_path
