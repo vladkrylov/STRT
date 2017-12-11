@@ -1,0 +1,482 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <widget class="QWidget" name="centralwidget">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout">
+      <item>
+       <layout class="QVBoxLayout" name="verticalLayout">
+        <item>
+         <widget class="QWidget" name="matplotlibToolbar" native="true"/>
+        </item>
+        <item>
+         <widget class="QWidget" name="plotWidget" native="true">
+          <property name="sizePolicy">
+           <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
+            <horstretch>0</horstretch>
+            <verstretch>0</verstretch>
+           </sizepolicy>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QWidget" name="widget" native="true">
+        <property name="minimumSize">
+         <size>
+          <width>120</width>
+          <height>50</height>
+         </size>
+        </property>
+        <property name="maximumSize">
+         <size>
+          <width>160</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <widget class="QLabel" name="label">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>20</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="text">
+            <string>Tracks:</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QScrollArea" name="scrollArea">
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>8192</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaWidgetContents">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>144</width>
+              <height>493</height>
+             </rect>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_6">
+             <item>
+              <widget class="QWidget" name="track1Widget" native="true">
+               <property name="minimumSize">
+                <size>
+                 <width>0</width>
+                 <height>0</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>30</height>
+                </size>
+               </property>
+               <layout class="QHBoxLayout" name="horizontalLayout_2">
+                <item>
+                 <widget class="QCheckBox" name="track1CheckBox">
+                  <property name="text">
+                   <string>Track 1</string>
+                  </property>
+                 </widget>
+                </item>
+                <item>
+                 <widget class="QLabel" name="track1colorLabel">
+                  <property name="sizePolicy">
+                   <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+                    <horstretch>0</horstretch>
+                    <verstretch>0</verstretch>
+                   </sizepolicy>
+                  </property>
+                  <property name="text">
+                   <string>o</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>458</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+            </layout>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+      </item>
+     </layout>
+    </item>
+   </layout>
+  </widget>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>30</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menuSession">
+    <property name="title">
+     <string>Sessio&amp;n</string>
+    </property>
+    <addaction name="action_load_session"/>
+    <addaction name="action_save_session"/>
+    <addaction name="separator"/>
+    <addaction name="action_load_training_set"/>
+   </widget>
+   <widget class="QMenu" name="menuAnalysis">
+    <property name="title">
+     <string>Ana&amp;lysis</string>
+    </property>
+    <addaction name="action_explore_parameters"/>
+    <addaction name="action_Hough_transform"/>
+    <addaction name="separator"/>
+    <addaction name="actionFit_selected_track"/>
+    <addaction name="actionFit_all_tracks"/>
+   </widget>
+   <widget class="QMenu" name="menuView">
+    <property name="title">
+     <string>&amp;View</string>
+    </property>
+    <addaction name="action_hide_bad_tracks"/>
+    <addaction name="action_hide_bad_events"/>
+   </widget>
+   <addaction name="menuSession"/>
+   <addaction name="menuAnalysis"/>
+   <addaction name="menuView"/>
+  </widget>
+  <widget class="QToolBar" name="toolBar">
+   <property name="windowTitle">
+    <string>toolBar</string>
+   </property>
+   <property name="orientation">
+    <enum>Qt::Vertical</enum>
+   </property>
+   <attribute name="toolBarArea">
+    <enum>LeftToolBarArea</enum>
+   </attribute>
+   <attribute name="toolBarBreak">
+    <bool>false</bool>
+   </attribute>
+   <addaction name="action_load_event"/>
+   <addaction name="action_previous_event"/>
+   <addaction name="action_next_event"/>
+   <addaction name="separator"/>
+   <addaction name="action_delete_track"/>
+   <addaction name="action_select_new_track"/>
+   <addaction name="separator"/>
+   <addaction name="action_add_hits_to_track"/>
+   <addaction name="action_remove_hits"/>
+   <addaction name="separator"/>
+   <addaction name="action_fit_track"/>
+   <addaction name="separator"/>
+   <addaction name="action_save_PDF"/>
+   <addaction name="action_save_all_PDF"/>
+   <addaction name="separator"/>
+   <addaction name="action_good_track"/>
+   <addaction name="action_bad_track"/>
+   <addaction name="separator"/>
+   <addaction name="action_export_to_matlab"/>
+   <addaction name="separator"/>
+   <addaction name="action_plot_dE_dx"/>
+  </widget>
+  <widget class="QStatusBar" name="statusBar"/>
+  <action name="action_load_event">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/appointment-new.png</normaloff>img/appointment-new.png</iconset>
+   </property>
+   <property name="text">
+    <string>Load Event</string>
+   </property>
+   <property name="toolTip">
+    <string>Load Event</string>
+   </property>
+  </action>
+  <action name="action_select_new_track">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/insert-link.png</normaloff>img/insert-link.png</iconset>
+   </property>
+   <property name="text">
+    <string>Select new track</string>
+   </property>
+   <property name="toolTip">
+    <string>Select new track</string>
+   </property>
+  </action>
+  <action name="action_delete_track">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/im-kick-user.png</normaloff>img/im-kick-user.png</iconset>
+   </property>
+   <property name="text">
+    <string>Delete track</string>
+   </property>
+   <property name="toolTip">
+    <string>Delete track</string>
+   </property>
+  </action>
+  <action name="action_add_hits_to_track">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>img/contact-new.png</normaloff>img/contact-new.png</iconset>
+   </property>
+   <property name="text">
+    <string>Add hits to track</string>
+   </property>
+   <property name="toolTip">
+    <string>Add hits to track</string>
+   </property>
+  </action>
+  <action name="action_remove_hits">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>img/list-remove.png</normaloff>img/list-remove.png</iconset>
+   </property>
+   <property name="text">
+    <string>Remove hits</string>
+   </property>
+   <property name="toolTip">
+    <string>Remove hits</string>
+   </property>
+  </action>
+  <action name="action_fit_track">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/graph-2-icon.png</normaloff>img/graph-2-icon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Fit track</string>
+   </property>
+   <property name="toolTip">
+    <string>Fit track</string>
+   </property>
+  </action>
+  <action name="action_next_event">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>img/next_event.png</normaloff>img/next_event.png</iconset>
+   </property>
+   <property name="text">
+    <string>Next Event</string>
+   </property>
+   <property name="toolTip">
+    <string>Next Event</string>
+   </property>
+   <property name="shortcut">
+    <string>F</string>
+   </property>
+  </action>
+  <action name="action_previous_event">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
+   <property name="icon">
+    <iconset>
+     <normaloff>img/previous_event.png</normaloff>img/previous_event.png</iconset>
+   </property>
+   <property name="text">
+    <string>Previous Event</string>
+   </property>
+   <property name="toolTip">
+    <string>Show previous event</string>
+   </property>
+   <property name="shortcut">
+    <string>V</string>
+   </property>
+  </action>
+  <action name="action_load_session">
+   <property name="text">
+    <string>&amp;Load</string>
+   </property>
+   <property name="toolTip">
+    <string>Load a session</string>
+   </property>
+  </action>
+  <action name="action_save_session">
+   <property name="text">
+    <string>&amp;Save</string>
+   </property>
+   <property name="toolTip">
+    <string>Save current session</string>
+   </property>
+  </action>
+  <action name="action_load_training_set">
+   <property name="text">
+    <string>L&amp;oad training set</string>
+   </property>
+  </action>
+  <action name="action_Hough_transform">
+   <property name="text">
+    <string>&amp;Hough transform</string>
+   </property>
+  </action>
+  <action name="actionFit_selected_track">
+   <property name="text">
+    <string>&amp;Fit selected track</string>
+   </property>
+  </action>
+  <action name="action_explore_parameters">
+   <property name="text">
+    <string>&amp;Explore parameters</string>
+   </property>
+  </action>
+  <action name="actionFit_all_tracks">
+   <property name="text">
+    <string>F&amp;it all tracks</string>
+   </property>
+  </action>
+  <action name="action_save_PDF">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/pdf.png</normaloff>img/pdf.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save PDF</string>
+   </property>
+  </action>
+  <action name="action_good_track">
+   <property name="icon">
+    <iconset>
+     <normalon>img/thumbs-up-icon.png</normalon>
+    </iconset>
+   </property>
+   <property name="text">
+    <string>Good Track</string>
+   </property>
+   <property name="shortcut">
+    <string>G</string>
+   </property>
+  </action>
+  <action name="action_bad_track">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/thumbs-down.png</normaloff>img/thumbs-down.png</iconset>
+   </property>
+   <property name="text">
+    <string>Bad Track</string>
+   </property>
+   <property name="shortcut">
+    <string>B</string>
+   </property>
+  </action>
+  <action name="action_save_all_PDF">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/pdficon.png</normaloff>img/pdficon.png</iconset>
+   </property>
+   <property name="text">
+    <string>Save all to PDF</string>
+   </property>
+   <property name="toolTip">
+    <string>Save all to PDF</string>
+   </property>
+  </action>
+  <action name="action_hide_bad_tracks">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>&amp;Hide bad tracks</string>
+   </property>
+  </action>
+  <action name="action_export_to_matlab">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/matlab64.png</normaloff>img/matlab64.png</iconset>
+   </property>
+   <property name="text">
+    <string>Export to Matlab</string>
+   </property>
+  </action>
+  <action name="action_plot_dE_dx">
+   <property name="icon">
+    <iconset>
+     <normaloff>img/Landau.png</normaloff>img/Landau.png</iconset>
+   </property>
+   <property name="text">
+    <string>Plot dE/dx</string>
+   </property>
+  </action>
+  <action name="action_hide_bad_events">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Hide bad events</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
