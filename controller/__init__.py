@@ -9,13 +9,13 @@ class Controller():
         if self.view:
             self.view.add_listener(self)
     
-    def on_load_events(self, event_file_paths):
+    def on_load_events(self, run_id, event_file_paths):
         if len(event_file_paths) == 0:
             return
         first_loaded_event = None
         for event_file_path in event_file_paths:
             ev = self.load_event(event_file_path)
-            loaded = self.model.add_event(ev)
+            loaded = self.model.add_event(run_id, ev)
             if loaded and first_loaded_event is None:
                 first_loaded_event = ev
         if self.view and first_loaded_event:
@@ -158,5 +158,13 @@ class Controller():
     def on_plot_dEdx(self, gap, nbins):
         self.model.plot_dEdx(gap, nbins)
 
-
+    def on_new_run(self, run_name):
+        self.model.new_run(run_name)
+        self.view.update_run_table(self.model.runs)
+        
+    def on_run_name_changed(self, run_id, new_name):
+        self.model.set_run_name(run_id, new_name)
+        # currently this triggers the cellChanged signal and causes an infinite loop
+        # disabled so far, but should be reimplemented
+#         self.view.update_run_table(self.model.runs)
 

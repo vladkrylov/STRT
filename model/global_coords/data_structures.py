@@ -7,7 +7,8 @@ from model.track_parameters import track_params_dict
 from scipy.ndimage.morphology import binary_hit_or_miss
 
 class Run():
-    def __init__(self, name, run_type='unknown'):
+    def __init__(self, id, name='', run_type='unknown'):
+        self.id = id
         self.name = name
         self.run_type = run_type
         self.events = []

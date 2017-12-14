@@ -7,11 +7,14 @@ from view.qt_track_representation import TrackRepresentation
 from lasso_manager import LassoManager
 from tracks_parameters import Ui_DockWidget as analysis_form
 from fasthough import Ui_DockWidget as fastHT_form
+from runs_table import Ui_DockWidget as runs_table_form
 from matplotlib.backends.backend_pdf import PdfPages
 
 class QtGui(Ui_MainWindow):
     def __init__(self):
         super(QtGui, self).__init__()
+        self.run_ids = []
+        self.current_run = None
         self.current_event = None
         self.tracks = []
         self.Houghlines = []
@@ -28,8 +31,16 @@ class QtGui(Ui_MainWindow):
         self.analysis_form.setupUi(self.analysis_widget)
         MainWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.analysis_widget)
         self.analysis_widget.hide()
+        #
+        self.runs_table_widget = QtWidgets.QDockWidget(MainWindow)
+        self.runs_table_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.runs_table_form = runs_table_form()
+        self.runs_table_form.setupUi(self.runs_table_widget)
+        self.prepare_runs_table()
+        MainWindow.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.runs_table_widget)
         # 
         self.fastHT_widget = QtWidgets.QDockWidget(MainWindow)
+        self.runs_table_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
         self.fastHT_form = fastHT_form()
         self.fastHT_form.setupUi(self.fastHT_widget)
         MainWindow.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.fastHT_widget)
@@ -69,7 +80,29 @@ class QtGui(Ui_MainWindow):
         #
         self.fastHT_form.reconstructAllButton.clicked.connect(self.reconstruct_all)
         self.fastHT_form.findLinesButton.clicked.connect(self.fast_Hough_lines)
+        #
+        self.runs_table_form.AddRunButton.clicked.connect(self.add_run)
+        self.runs_table_form.RemoveRunButton.clicked.connect(self.remove_run)
+        self.runs_table_form.RunsTable.cellChanged.connect(self.run_name_changed)
     
+    def message_to_user(self, mtype, text1, text2=None, text3=None):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(mtype)
+        msg.setText(text1)
+        if text2:
+            msg.setInformativeText(text2)
+#         msg.setWindowTitle("MessageBox demo")
+        if text3:
+            msg.setDetailedText(text3)
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg.exec_()
+        
+    def info_message(self, text1, text2=None, text3=None):
+        self.message_to_user(QtWidgets.QMessageBox.Information, text1, text2, text3)
+    
+    def error_message(self, text1, text2=None, text3=None):
+        self.message_to_user(QtWidgets.QMessageBox.Error, text1, text2, text3)
+        
     def add_listener(self, controller):
         self.controller = controller
         # track parameters list initialization
@@ -94,9 +127,14 @@ class QtGui(Ui_MainWindow):
         self.add_binning_toolbar()
     
     def load_new_event(self):
+        run_index = self.get_selected_run_index()
+        if run_index is None:
+            self.info_message('Please, select a Run from the table to assign the events.')
+            return
+        run_id = self.run_ids[run_index]
         test_file_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/indata/Run25"
         filenames = QtWidgets.QFileDialog.getOpenFileNames(self.centralwidget, "QFileDialog.getOpenFileNames()", test_file_path, "All Files (*)")
-        self.controller.on_load_events(filenames[0])
+        self.controller.on_load_events(run_id, filenames[0])
     
     def update_with_event(self, event, is_first=False, is_last=False):
         self.current_event = event
@@ -459,5 +497,57 @@ class QtGui(Ui_MainWindow):
         gap = parameters.get('gap_length')
         nbins = parameters.get('nbins_dEdx')
         self.controller.on_plot_dEdx(gap, nbins)
+        
+    def prepare_runs_table(self):
+        t = self.runs_table_form.RunsTable
+        t.setRowCount(0)
+        t.setColumnCount(1)
+        t.horizontalHeader().setStretchLastSection(True)
+        t.setHorizontalHeaderLabels(["Run title"])
+
+    def add_run(self):
+        t = self.runs_table_form.RunsTable
+        run_name = 'New run %d' % (t.rowCount() + 1)
+        run_name = run_name.replace(' ', '_')
+        self.controller.on_new_run(run_name)
+#         t = self.runs_table_form.RunsTable
+#         row = t.rowCount() + 1
+#         newItem = QtWidgets.QTableWidgetItem('New run %d' % row)
+#         t.setRowCount(row)
+#         t.setItem(row-1, 0, newItem)
+        
+    def remove_run(self):
+        self.runs_table_form.RunsTable
+        
+    def update_run_table(self, runs):
+        t = self.runs_table_form.RunsTable
+        n_runs = len(runs)
+        t.setRowCount(n_runs)
+        for i in range(n_runs):
+            newItem = QtWidgets.QTableWidgetItem(runs[i].name)
+            t.setItem(i, 0, newItem)
+        self.run_ids = [run.id for run in runs]
+        print [run.name for run in runs]
+        
+    def get_selected_run_index(self):
+        '''Returns a index of selected run in the runs table'''
+        t = self.runs_table_form.RunsTable
+        selected_runs = [index.row() for index in t.selectedIndexes()]
+        if len(selected_runs) == 0:
+            return None
+        print selected_runs[0]
+        return selected_runs[0]
+            
+    def run_name_changed(self):
+        run_index = self.get_selected_run_index()
+        if run_index is None:
+            return
+        t = self.runs_table_form.RunsTable
+        run_id = self.run_ids[run_index]
+        new_name = t.item(run_index, 0).text()
+        self.controller.on_run_name_changed(run_id, new_name)
+
+
+
 
 

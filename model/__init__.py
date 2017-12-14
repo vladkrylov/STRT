@@ -15,11 +15,22 @@ class Model():
         self.events = []
         self.saver = None
         
-    def add_run(self, run):
+    def new_run(self, run_name):
+        if len(self.runs) == 0:
+            run_id = 0
+        else:
+            run_id = max([run.id for run in self.runs]) + 1
+        run = Run(run_id, run_name)
         if run in self.runs:
             return False
         self.runs.append(run)
         return True
+    
+    def set_run_name(self, run_id, new_name):
+        run = [r for r in self.runs if r.id == run_id]
+        if len(run) == 0:
+            return
+        run[0].name = new_name
         
     def add_event(self, run_id, ev):
         run = self.get_run(run_id)
@@ -27,7 +38,7 @@ class Model():
             return False
         run.events.append(ev)
         return True
-    
+
     def remove_event(self):
         pass
     
