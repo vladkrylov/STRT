@@ -116,8 +116,8 @@ class Controller():
         is_first, is_last = self.get_event_first_last(run_id, event)
         self.view.update_with_event(event, is_first=is_first, is_last=is_last)
     
-    def on_dump_track(self, event_id, track_id):
-        self.model.dump_track(event_id, track_id)
+    def on_dump_track(self, run_id, event_id, track_id):
+        self.model.dump_track(run_id, event_id, track_id)
         
     def get_track_parameters(self):
         return self.model.get_track_parameters()
@@ -136,32 +136,32 @@ class Controller():
         
     def on_reconstruct_all_events(self, run_id, parameters):
         self.model.analyze_all(run_id, parameters)
+        run = self.model.get_run(run_id)
         self.view.update_with_event(run.events[0])
         
     def on_event_fast_Hough_transform(self, run_id, event_id, parameters):
         self.model.fast_Hough_transform(run_id, event_id, parameters)
-        self.model.determine_good_tracks()
-        self.view.update_with_event(self.model.get_event(event_id))
+        self.view.update_with_event(self.model.get_event(run_id, event_id))
         
     def on_track_Hough_transform(self, event_id, track_id):
         HT, lines = self.model.Hough_transform(event_id, track_id)
         self.view.update_Hough_transform_canvas(HT, lines)
     
     def on_save_all_pdf(run_id, self):
-        run = model.get_run(run_id)
+        run = self.model.get_run(run_id)
         for ev in run.events:
             is_first, is_last = self.get_event_first_last(run_id, ev)
             self.view.update_with_event(ev, is_first=is_first, is_last=is_last)
             self.view.save_pdf()
 
-    def export_to_matlab(self):
-        self.model.dump2matlab()
+    def export_to_matlab(self, run_id):
+        self.model.dump2matlab(run_id)
     
-    def mark_good_track(self, event_id, track_id, is_good):
-        self.model.mark_good_track(event_id, track_id, is_good)
+    def mark_good_track(self, run_id, event_id, track_id, is_good):
+        self.model.mark_good_track(run_id, event_id, track_id, is_good)
     
-    def on_plot_dEdx(self, gap, nbins):
-        self.model.plot_dEdx(gap, nbins)
+    def on_plot_dEdx(self, run_id, gap, nbins):
+        self.model.plot_dEdx(run_id, gap, nbins)
 
     def on_new_run(self, run_name):
         self.model.new_run(run_name)

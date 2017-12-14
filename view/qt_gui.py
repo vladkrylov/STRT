@@ -130,7 +130,7 @@ class QtGui(Ui_MainWindow):
         run_id = self.get_selected_run_id()
         if run_id is None:
             return
-        test_file_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/indata/Run25"
+        test_file_path = "indata/Run25"
         filenames = QtWidgets.QFileDialog.getOpenFileNames(self.centralwidget, "QFileDialog.getOpenFileNames()", test_file_path, "All Files (*)")
         self.controller.on_load_events(run_id, filenames[0])
     
@@ -220,6 +220,9 @@ class QtGui(Ui_MainWindow):
         self.controller.on_remove_track(0)
         
     def on_pick(self, mouse_event):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if len(self.tracks) == 0:
             return
         if mouse_event.artist not in [t.line for t in self.tracks]:
@@ -230,7 +233,7 @@ class QtGui(Ui_MainWindow):
             if t.line == mouse_event.artist and not t.is_selected:
                 # t was not selected before, but now it is picked
                 t.select()
-                self.controller.on_dump_track(self.current_event.id, t.track.id)
+                self.controller.on_dump_track(run_id, self.current_event.id, t.track.id)
             elif t.line == mouse_event.artist and t.is_selected:
                 # t was selected before and now it is picked again, do nothing with it
                 pass
@@ -461,11 +464,16 @@ class QtGui(Ui_MainWindow):
             self.Houghlines = []
 
     def fast_Hough_lines(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
-        self.controller.on_event_fast_Hough_transform(self.current_event.id, parameters)
+        self.controller.on_event_fast_Hough_transform(run_id, self.current_event.id, parameters)
 
     def reconstruct_all(self):
         run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
         self.controller.on_reconstruct_all_events(run_id, parameters)
 
@@ -479,29 +487,41 @@ class QtGui(Ui_MainWindow):
         self.controller.on_save_all_pdf()
 
     def good_track(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         selected = [t for t in self.tracks if t.is_selected]
         if len(selected) > 0:
             selected[0].hits.set_marker('^')
             self.plotWidget.draw()
             track_id = selected[0].track.id
-            self.controller.mark_good_track(self.current_event.id, track_id, is_good=True)
+            self.controller.mark_good_track(run_id, self.current_event.id, track_id, is_good=True)
 
     def bad_track(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         selected = [t for t in self.tracks if t.is_selected]
         if len(selected) > 0:
             selected[0].hits.set_marker('o')
             self.plotWidget.draw()
             track_id = selected[0].track.id
-            self.controller.mark_good_track(self.current_event.id, track_id, is_good=False)
+            self.controller.mark_good_track(run_id, self.current_event.id, track_id, is_good=False)
         
     def export_to_matlab(self):
-        self.controller.export_to_matlab()
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
+        self.controller.export_to_matlab(run_id)
 
     def plot_dEdx(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
         gap = parameters.get('gap_length')
         nbins = parameters.get('nbins_dEdx')
-        self.controller.on_plot_dEdx(gap, nbins)
+        self.controller.on_plot_dEdx(run_id, gap, nbins)
         
     def prepare_runs_table(self):
         t = self.runs_table_form.RunsTable

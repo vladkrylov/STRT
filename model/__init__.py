@@ -12,7 +12,6 @@ from model.analysis import fit_Landau
 class Model():
     def __init__(self):
         self.runs = []
-        self.events = []
         self.saver = None
         
     def new_run(self, run_name):
@@ -111,14 +110,16 @@ class Model():
             track = filter_by_id(event.tracks, track_id)
         return event, track
 
-    def save_all(self, directory):
+    def save_all(self, run_id, directory):
+        run = self.get_run(run_id)
         s = Saver(directory)
-        s.save_all(self.events)
+        s.save_all(run.events)
         
     def load_all(self, directory):
-        s = Saver(directory)
-        self.events = s.load_all()
-        return self.events[0].id
+        pass
+#         s = Saver(directory)
+#         self.events = s.load_all()
+#         return self.events[0].id
     
     def dump_track(self, run_id, event_id, track_id):
         _, track = self.get_event_and_track(run_id, event_id, track_id)
@@ -145,14 +146,15 @@ class Model():
         return HT, lines
     
     def analyze_all(self, run_id, parameters):
+        run = self.get_run(run_id)
         start = time.time()
         n_tracks = 0
-        for ev in self.events:
+        for ev in run.events:
             self.fast_Hough_transform(run_id, ev.id, parameters)
             n_tracks += len(ev.tracks)
         end = time.time()
         print "============ Reconstruction performance ============="
-        print "    %d events analyzed" % len(self.events)
+        print "    %d events analyzed" % len(run.events)
         print "    %d tracks found" % n_tracks
         print "    time elapsed: %.1f seconds" % (end - start)
         
