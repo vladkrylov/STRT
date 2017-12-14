@@ -127,11 +127,9 @@ class QtGui(Ui_MainWindow):
         self.add_binning_toolbar()
     
     def load_new_event(self):
-        run_index = self.get_selected_run_index()
-        if run_index is None:
-            self.info_message('Please, select a Run from the table to assign the events.')
+        run_id = self.get_selected_run_id()
+        if run_id is None:
             return
-        run_id = self.run_ids[run_index]
         test_file_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/indata/Run25"
         filenames = QtWidgets.QFileDialog.getOpenFileNames(self.centralwidget, "QFileDialog.getOpenFileNames()", test_file_path, "All Files (*)")
         self.controller.on_load_events(run_id, filenames[0])
@@ -196,14 +194,20 @@ class QtGui(Ui_MainWindow):
         self.statusBar.showMessage(str(event))
     
     def prev_event(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if self.current_event is None:
             return
-        self.controller.on_show_previous_event(self.current_event)
+        self.controller.on_show_previous_event(run_id, self.current_event)
     
     def next_event(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if self.current_event is None:
             return
-        self.controller.on_show_next_event(self.current_event)
+        self.controller.on_show_next_event(run_id, self.current_event)
     
     def add_new_track(self):
         if self.current_event is None:
@@ -461,15 +465,16 @@ class QtGui(Ui_MainWindow):
         self.controller.on_event_fast_Hough_transform(self.current_event.id, parameters)
 
     def reconstruct_all(self):
+        run_id = self.get_selected_run_id()
         parameters = self.fastHT_form.get_params()
-        self.controller.on_reconstruct_all_events(parameters)
+        self.controller.on_reconstruct_all_events(run_id, parameters)
 
     def save_pdf(self):
         fname = 'STRT_Event%d.pdf' % self.current_event.id
         with PdfPages(fname) as pdf:
             pdf.savefig(self.plotWidget.figure)
             print "%s was created." % fname
-            
+
     def save_all_pdf(self):
         self.controller.on_save_all_pdf()
 
@@ -529,17 +534,25 @@ class QtGui(Ui_MainWindow):
         self.run_ids = [run.id for run in runs]
         print [run.name for run in runs]
         
-    def get_selected_run_index(self):
+    def get_selected_run_index(self, error_dialog=True):
         '''Returns a index of selected run in the runs table'''
         t = self.runs_table_form.RunsTable
         selected_runs = [index.row() for index in t.selectedIndexes()]
         if len(selected_runs) == 0:
+            if error_dialog:
+                self.info_message('Please, select a Run from the table to assign the events.')
             return None
-        print selected_runs[0]
         return selected_runs[0]
+    
+    def get_selected_run_id(self, error_dialog=True):
+        '''Returns an id of selected run'''
+        run_index = self.get_selected_run_index(error_dialog=error_dialog)
+        if run_index is None:
+            return None
+        return self.run_ids[run_index]
             
     def run_name_changed(self):
-        run_index = self.get_selected_run_index()
+        run_index = self.get_selected_run_index(error_dialog=False)
         if run_index is None:
             return
         t = self.runs_table_form.RunsTable

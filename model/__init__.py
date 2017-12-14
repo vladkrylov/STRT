@@ -100,17 +100,17 @@ class Model():
 #         if len(existing_ids) == 0:
 #             return 0
 #         return max(existing_ids) + 1 
-        
+
     def get_run(self, run_id):
         return filter_by_id(self.runs, run_id)
-    
+
     def get_event_and_track(self, run_id, event_id, track_id):
         event = self.get_event(run_id, event_id)
         track = None
         if event:
             track = filter_by_id(event.tracks, track_id)
         return event, track
-        
+
     def save_all(self, directory):
         s = Saver(directory)
         s.save_all(self.events)

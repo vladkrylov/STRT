@@ -19,9 +19,10 @@ class Controller():
             if loaded and first_loaded_event is None:
                 first_loaded_event = ev
         if self.view and first_loaded_event:
-            i = self.model.events.index(first_loaded_event)
+            run = self.model.get_run(run_id)
+            i = run.events.index(first_loaded_event)
             is_first = i == 0
-            is_last = i == len(self.model.events) - 1
+            is_last = i == len(run.events) - 1
             self.view.update_with_event(first_loaded_event, is_first=is_first, is_last=is_last)
     
     def load_event(self, file_path):
@@ -39,8 +40,8 @@ class Controller():
             try:
                 return int(filename[len(ev_prefix): -len(ev_suffix)])
             except:
-                if len(self.model.events) > 0:
-                    return self.model.events[-1].id + 1
+                if len(run.events) > 0:
+                    return run.events[-1].id + 1
                 else:
                     return 0
         return None
@@ -53,54 +54,57 @@ class Controller():
             return 0
         return max(existing_ids) + 1 
     
-    def on_show_next_event(self, current_event):
-        i = self.model.events.index(current_event)
-        is_last = i == len(self.model.events) - 1
+    def on_show_next_event(self, run_id, current_event):
+        run = self.model.get_run(run_id)
+        i = run.events.index(current_event)
+        is_last = i == len(run.events) - 1
         if is_last:
             return
-        next_event = self.model.events[i+1]
-        is_last = (i+1) == len(self.model.events) - 1
+        next_event = run.events[i+1]
+        is_last = (i+1) == len(run.events) - 1
         self.view.update_with_event(next_event, is_first=False, is_last=is_last)
     
-    def on_show_previous_event(self, current_event):
-        i = self.model.events.index(current_event)
+    def on_show_previous_event(self, run_id, current_event):
+        run = self.model.get_run(run_id)
+        i = run.events.index(current_event)
         is_first = i == 0
         if is_first:
             return
-        prev_event = self.model.events[i-1]
+        prev_event = run.events[i-1]
         is_first = (i-1) == 0
         self.view.update_with_event(prev_event, is_first=is_first, is_last=False)
     
-    def on_add_track(self, event_id):
-        self.model.add_track(event_id)
+    def on_add_track(self, run_id, event_id):
+        self.model.add_track(run_id, event_id)
         if self.view:
-            event = self.model.get_event(event_id)
-            is_first, is_last = self.get_event_first_last(event)
+            event = self.model.get_event(run_id, event_id)
+            is_first, is_last = self.get_event_first_last(run_id, event)
             self.view.update_with_event(event, is_first, is_last)
     
     def on_remove_track(self, event_id, track_id):
         return self.model.remove_track(event_id, track_id)
     
-    def on_add_hits(self, event_id, track_id, selection_data):
+    def on_add_hits(self, run_id, event_id, track_id, selection_data):
         hit_indices = selection_data
-        self.model.add_hits(event_id, track_id, hit_indices)
+        self.model.add_hits(run_id, event_id, track_id, hit_indices)
         if self.view:
-            event = self.model.get_event(event_id)
-            is_first, is_last = self.get_event_first_last(event)
+            event = self.model.get_event(run_id, event_id)
+            is_first, is_last = self.get_event_first_last(run_id, event)
             self.view.update_with_event(event, is_first, is_last)
     
-    def on_remove_hits(self, event_id, track_id, selection_data):
+    def on_remove_hits(self, run_id, event_id, track_id, selection_data):
         hit_indices = selection_data
-        self.model.remove_hits(event_id, track_id, hit_indices)
+        self.model.remove_hits(run_id, event_id, track_id, hit_indices)
         if self.view:
-            event = self.model.get_event(event_id)
-            is_first, is_last = self.get_event_first_last(event)
+            event = self.model.get_event(run_id, event_id)
+            is_first, is_last = self.get_event_first_last(run_id, event)
             self.view.update_with_event(event, is_first, is_last)
 
-    def get_event_first_last(self, event):
-        i = self.model.events.index(event)
+    def get_event_first_last(self, run_id, event):
+        run = self.model.get_run(run_id)
+        i = run.events.index(event)
         is_first = i == 0
-        is_last = i == len(self.model.events) - 1
+        is_last = i == len(run.events) - 1
         return is_first, is_last
     
     def on_save_session(self, save_path):
@@ -109,7 +113,7 @@ class Controller():
     def on_load_session(self, load_path):
         first_loaded_event_id = self.model.load_all(load_path)
         event = self.model.get_event(first_loaded_event_id)
-        is_first, is_last = self.get_event_first_last(event)
+        is_first, is_last = self.get_event_first_last(run_id, event)
         self.view.update_with_event(event, is_first=is_first, is_last=is_last)
     
     def on_dump_track(self, event_id, track_id):
@@ -130,12 +134,12 @@ class Controller():
         self.view.update_Hough_transform_canvas(HT, lines)
         self.view.update_with_event(self.model.get_event(event_id))
         
-    def on_reconstruct_all_events(self, parameters):
-        self.model.analyze_all(parameters)
-        self.view.update_with_event(self.model.events[0])
+    def on_reconstruct_all_events(self, run_id, parameters):
+        self.model.analyze_all(run_id, parameters)
+        self.view.update_with_event(run.events[0])
         
-    def on_event_fast_Hough_transform(self, event_id, parameters):
-        self.model.fast_Hough_transform(event_id, parameters)
+    def on_event_fast_Hough_transform(self, run_id, event_id, parameters):
+        self.model.fast_Hough_transform(run_id, event_id, parameters)
         self.model.determine_good_tracks()
         self.view.update_with_event(self.model.get_event(event_id))
         
@@ -143,9 +147,10 @@ class Controller():
         HT, lines = self.model.Hough_transform(event_id, track_id)
         self.view.update_Hough_transform_canvas(HT, lines)
     
-    def on_save_all_pdf(self):
-        for ev in self.model.events:
-            is_first, is_last = self.get_event_first_last(ev)
+    def on_save_all_pdf(run_id, self):
+        run = model.get_run(run_id)
+        for ev in run.events:
+            is_first, is_last = self.get_event_first_last(run_id, ev)
             self.view.update_with_event(ev, is_first=is_first, is_last=is_last)
             self.view.save_pdf()
 
