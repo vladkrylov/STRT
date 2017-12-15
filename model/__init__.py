@@ -4,7 +4,7 @@ import numpy as np
 import time
 
 from model.global_coords.data_structures import *
-from savers import YamlSaver as Saver
+from savers import RootSaver as Saver
 from track_parameters import track_params_dict
 from Hough_transform import hough_line_event, Hough_lines_opencv
 from model.analysis import fit_Landau
@@ -12,7 +12,7 @@ from model.analysis import fit_Landau
 class Model():
     def __init__(self):
         self.runs = []
-        self.saver = None
+        self.saver = Saver()
         
     def new_run(self, run_name):
         if len(self.runs) == 0:
@@ -90,9 +90,9 @@ class Model():
     
     def get_event(self, run_id, event_id):
         run = self.get_run(run_id)
-        if run is None:
+        if run is None or len(run.events) == 0:
             return None
-        return filter_by_id(run.events, event_id)
+        return filter_by_id(run.events, event_id) or run.events[0]
         
 #     def generate_track_id(self, event):
 #         existing_ids = [tr.id for tr in event.tracks]
@@ -110,10 +110,9 @@ class Model():
             track = filter_by_id(event.tracks, track_id)
         return event, track
 
-    def save_all(self, run_id, directory):
-        run = self.get_run(run_id)
-        s = Saver(directory)
-        s.save_all(run.events)
+    def save_all(self, where_to_save):
+        self.saver.save_all(self.runs, fname=where_to_save)
+        print 'Session was stored to %s' % where_to_save
         
     def load_all(self, directory):
         pass

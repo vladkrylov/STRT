@@ -74,6 +74,15 @@ class Controller():
         is_first = (i-1) == 0
         self.view.update_with_event(prev_event, is_first=is_first, is_last=False)
     
+    def show_event(self, run_id, event_id):
+        run = self.model.get_run(run_id)
+        event = self.model.get_event(run_id, event_id)
+        if event is None:
+            is_first, is_last = True, True
+        else:
+            is_first, is_last = self.get_event_first_last(run_id, event)
+        self.view.update_with_event(event, is_first, is_last)
+    
     def on_add_track(self, run_id, event_id):
         self.model.add_track(run_id, event_id)
         if self.view:

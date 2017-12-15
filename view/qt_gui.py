@@ -19,6 +19,7 @@ class QtGui(Ui_MainWindow):
         self.tracks = []
         self.Houghlines = []
         self.hits_selection_is_on = None
+        self.current_events_cache = {}  # run_id: current_event_id
         
     def setupUi(self, MainWindow):
         Ui_MainWindow.setupUi(self, MainWindow)
@@ -84,6 +85,7 @@ class QtGui(Ui_MainWindow):
         self.runs_table_form.AddRunButton.clicked.connect(self.add_run)
         self.runs_table_form.RemoveRunButton.clicked.connect(self.remove_run)
         self.runs_table_form.RunsTable.cellChanged.connect(self.run_name_changed)
+        self.runs_table_form.RunsTable.currentCellChanged.connect(self.new_run_selected)
     
     def message_to_user(self, mtype, text1, text2=None, text3=None):
         msg = QtWidgets.QMessageBox()
@@ -135,7 +137,12 @@ class QtGui(Ui_MainWindow):
         self.controller.on_load_events(run_id, filenames[0])
     
     def update_with_event(self, event, is_first=False, is_last=False):
+        if event is None:
+            self.plotWidget.clear()
+            return
+        run_id = self.get_selected_run_id()
         self.current_event = event
+        self.current_events_cache[run_id] = event.id
         points = [(h.x, h.y) for h in event.hits]
         x = map(lambda point: point[0], points)
         y = map(lambda point: point[1], points)
@@ -296,9 +303,12 @@ class QtGui(Ui_MainWindow):
             self.controller.on_remove_hits(event_id, track_id, indices)
         
     def save_session(self):
-        test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
-        dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly ) 
-        self.controller.on_save_session(dirname)
+#         test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
+#         dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly ) 
+#         self.controller.on_save_session(dirname)
+#         out_file = QtWidgets.QFileDialog.getSaveFileName(self.centralwidget)
+        out_file = 'outdata/test.root'
+        self.controller.on_save_session(out_file)
         
     def load_session(self):
 #         test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
@@ -579,6 +589,12 @@ class QtGui(Ui_MainWindow):
         run_id = self.run_ids[run_index]
         new_name = t.item(run_index, 0).text()
         self.controller.on_run_name_changed(run_id, new_name)
+        
+    def new_run_selected(self, currentRow, currentColumn, previousRow, previousColumn):
+        run_index = currentRow
+        run_id = self.run_ids[run_index]
+        event_id = self.current_events_cache.get(run_id)
+        self.controller.show_event(run_id, event_id)
 
 
 

@@ -60,6 +60,10 @@ class PlotCanvas(MyMplCanvas):
                                     bottom=0.00)
         self.figure.canvas.draw()
 
+    def clear(self):
+        self.axes.clear()
+        self.figure.canvas.draw()
+
     def compute_initial_figure(self):
         t = arange(0.0, 3.0, 0.01)
         s = sin(2*pi*t)

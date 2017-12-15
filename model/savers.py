@@ -5,6 +5,13 @@ import ROOT as r
 from model import Event, Track, Hit
 from model.color_set import get_color
 
+# import rootpy
+from rootpy.tree import Tree, TreeModel, IntCol
+from rootpy.tree import Ntuple
+from rootpy.io import root_open
+from rootpy import stl
+from random import gauss
+
 class Saver():
     def __init__(self):
         self.file = None
@@ -103,11 +110,23 @@ class YamlSaver():
 
 class RootSaver():
     def __init__(self):
-        self.file = r.TFile( 'Run.root', 'recreate' )
-        self.events_tree = r.TTree( 't1', 'tree with tracks' )
-        self.tracks_tree = r.TTree( 't1', 'tree with tracks' )
+        pass
     
-    def save_tracks(self):
+    def save_all(self, runs, fname='strt_session.root'):
+        with root_open(fname, 'recreate') as root_file:
+            d1 = root_file.mkdir('Test1')
+            d1.cd()
+            ntuple = Ntuple(('a', 'b', 'c'), name="test")
+            for i in range(20):
+                ntuple.Fill(gauss(.5, 1.), gauss(.3, 2.), gauss(13., 42.))
+            ntuple.write()
+        
+        for run in runs:
+            for event in run.events:
+                for track in event.tracks:
+                    pass
+    
+    def load_all(self):
         pass
 
 if __name__ == "__main__":
