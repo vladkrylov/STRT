@@ -179,6 +179,9 @@ class Track():
     def __neq__(self, other):
         return not self.__eq__(other)
     
+    def int_color(self):
+        return int(self.color[1:], 16)
+    
     def dump(self):
         dump_str = "Track %d\n" % self.id
         dump_str += "    length = %.2f\n" % self.length()

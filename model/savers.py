@@ -6,8 +6,7 @@ from model import Event, Track, Hit
 from model.color_set import get_color
 
 # import rootpy
-from rootpy.tree import Tree, TreeModel, IntCol
-from rootpy.tree import Ntuple
+from rootpy.tree import Tree, TreeModel, IntCol, FloatCol
 from rootpy.io import root_open
 from rootpy import stl
 from random import gauss
@@ -109,23 +108,72 @@ class YamlSaver():
 
 
 class RootSaver():
+    class rEvent(TreeModel):
+        id = IntCol()
+        xhits = stl.vector("float")
+        yhits = stl.vector("float")
+        nHits = IntCol()
+        nTracks = IntCol()
+        nGoodTracks = IntCol()
+        
+    class rTrack(TreeModel):
+        id = IntCol()
+        event_id = IntCol()
+        hit_indices = stl.vector("int")
+        color = IntCol()
+        length = FloatCol()
+        rho = FloatCol()
+        theta = FloatCol()
+        x0 = FloatCol()
+        y0 = FloatCol()
+        nHits = IntCol()
+        R2 = FloatCol()
+        is_good = IntCol()
+        
     def __init__(self):
         pass
     
     def save_all(self, runs, fname='strt_session.root'):
         with root_open(fname, 'recreate') as root_file:
-            d1 = root_file.mkdir('Test1')
-            d1.cd()
-            ntuple = Ntuple(('a', 'b', 'c'), name="test")
-            for i in range(20):
-                ntuple.Fill(gauss(.5, 1.), gauss(.3, 2.), gauss(13., 42.))
-            ntuple.write()
-        
-        for run in runs:
-            for event in run.events:
-                for track in event.tracks:
-                    pass
-    
+#             d1 = root_file.mkdir('Test1')
+#             d1.cd()
+#             ntuple = Ntuple(('a', 'b', 'c'), name="test")
+#             for i in range(20):
+#                 ntuple.Fill(gauss(.5, 1.), gauss(.3, 2.), gauss(13., 42.))
+#             ntuple.write()
+            for run in runs:
+                run_dir = root_file.mkdir(run.name)
+                run_dir.cd()
+                event_tree = Tree("Events", model=RootSaver.rEvent)
+                track_tree = Tree("Tracks", model=RootSaver.rTrack)
+                for event in run.events:
+                    event_tree.id = event.id
+                    for i in range(len(event.hits)):
+                        event_tree.xhits.push_back(event.hits[i].x)
+                        event_tree.yhits.push_back(event.hits[i].y)
+                    event_tree.nHits = len(event.hits)
+                    event_tree.nTracks = len(event.tracks)
+                    event_tree.nGoodTracks = len([t for t in event.tracks if t.is_good])
+                    event_tree.fill(reset=True)
+                    
+                    for track in event.tracks:
+                        track_tree.id = track.id
+                        track_tree.event_id = track.event_id
+                        for i in track.hit_indices:
+                            track_tree.hit_indices.push_back(i)
+                        track_tree.color = track.int_color()
+                        track_tree.length = track.length()
+                        track_tree.rho = track.rho
+                        track_tree.theta = track.theta
+                        track_tree.x0 = track.start_point[0]
+                        track_tree.y0 = track.start_point[1]
+                        track_tree.nHits = len(track.hit_indices)
+                        track_tree.R2 = track.R2
+                        track_tree.is_good = track.is_good
+                        track_tree.fill(reset=True)
+                event_tree.write()
+                track_tree.write()
+                
     def load_all(self):
         pass
 
