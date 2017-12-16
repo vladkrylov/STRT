@@ -177,6 +177,12 @@ class Controller():
         self.model.new_run(run_name)
         self.view.update_run_table(self.model.runs)
         
+    def on_remove_run(self, run_id):
+        run = self.model.get_run(run_id)
+        if run in self.model.runs:
+            self.model.runs.remove(run)
+        self.view.update_run_table(self.model.runs)
+        
     def on_run_name_changed(self, run_id, new_name):
         self.model.set_run_name(run_id, new_name)
         # currently this triggers the cellChanged signal and causes an infinite loop

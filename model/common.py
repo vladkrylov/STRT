@@ -8,5 +8,5 @@ def generate_run_id(existing_runs):
     if len(existing_runs) == 0:
         run_id = 0
     else:
-        run_id = max([run.id for run in self.runs]) + 1
+        run_id = max([run.id for run in existing_runs]) + 1
     return run_id 

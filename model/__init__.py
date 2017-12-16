@@ -281,8 +281,9 @@ class Model():
         density = float(n_hits) / tr.length()
         if density < 1.12 or density > 4.:
             return False
-            
-        if tr.start_point[0] > 14.:
+        
+        start_point = tr.get_start_point()   
+        if start_point[0] > 14.:
             return False
             
         if tr.theta < -0.2 or tr.theta > 0.35:

@@ -552,7 +552,8 @@ class QtGui(Ui_MainWindow):
 #         t.setItem(row-1, 0, newItem)
         
     def remove_run(self):
-        self.runs_table_form.RunsTable
+        run_id = self.get_selected_run_id()
+        self.controller.on_remove_run(run_id)
         
     def update_run_table(self, runs):
         t = self.runs_table_form.RunsTable
@@ -596,7 +597,7 @@ class QtGui(Ui_MainWindow):
         event_id = self.current_events_cache.get(run_id)
         self.controller.show_event(run_id, event_id)
 
-
+        
 
 
 
