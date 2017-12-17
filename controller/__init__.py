@@ -147,7 +147,8 @@ class Controller():
     def on_reconstruct_all_events(self, run_id, parameters):
         self.model.analyze_all(run_id, parameters)
         run = self.model.get_run(run_id)
-        self.view.update_with_event(run.events[0])
+        if self.view:
+            self.view.update_with_event(run.events[0])
         
     def on_event_fast_Hough_transform(self, run_id, event_id, parameters):
         self.model.fast_Hough_transform(run_id, event_id, parameters)
@@ -174,8 +175,11 @@ class Controller():
         self.model.plot_dEdx(run_id, gap, nbins)
 
     def on_new_run(self, run_name):
-        self.model.new_run(run_name)
-        self.view.update_run_table(self.model.runs)
+        run_id = None
+        run_id = self.model.new_run(run_name)
+        if self.view:
+            self.view.update_run_table(self.model.runs)
+        return run_id
         
     def on_remove_run(self, run_id):
         run = self.model.get_run(run_id)

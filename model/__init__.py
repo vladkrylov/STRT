@@ -14,21 +14,21 @@ class Model():
     def __init__(self):
         self.runs = []
         self.saver = Saver()
-        
+
     def new_run(self, run_name):
         run_id = generate_run_id(self.runs)
         run = Run(run_id, run_name)
         if run in self.runs:
-            return False
+            return None
         self.runs.append(run)
-        return True
-    
+        return run_id
+
     def set_run_name(self, run_id, new_name):
         run = [r for r in self.runs if r.id == run_id]
         if len(run) == 0:
             return
         run[0].name = new_name
-        
+
     def add_event(self, run_id, ev):
         run = self.get_run(run_id)
         if ev in run.events:
@@ -38,7 +38,7 @@ class Model():
 
     def remove_event(self):
         pass
-    
+
     def add_track(self, run_id, event_id):
         event = self.get_event(run_id, event_id)
         if not event:
@@ -48,14 +48,14 @@ class Model():
                               track_id=track_id, 
                               track_type="selected"))
         return True
-    
+
     def remove_track(self, run_id, event_id, track_id):
         event, track = self.get_event_and_track(run_id, event_id, track_id)
         if not track or not event:
             return False
         event.tracks.remove(track)
         return True
-        
+
     def add_hits(self, run_id, event_id, track_id, hit_indices):
         event, track = self.get_event_and_track(run_id, event_id, track_id)
         if not track or not event:
