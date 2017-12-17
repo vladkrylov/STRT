@@ -8,6 +8,7 @@ from savers import RootSaver as Saver
 from track_parameters import track_params_dict
 from Hough_transform import hough_line_event, Hough_lines_opencv
 from model.analysis import fit_Landau
+from model.common import generate_run_id
 
 class Model():
     def __init__(self):
@@ -15,10 +16,7 @@ class Model():
         self.saver = Saver()
         
     def new_run(self, run_name):
-        if len(self.runs) == 0:
-            run_id = 0
-        else:
-            run_id = max([run.id for run in self.runs]) + 1
+        run_id = generate_run_id(self.runs)
         run = Run(run_id, run_name)
         if run in self.runs:
             return False
@@ -114,11 +112,11 @@ class Model():
         self.saver.save_all(self.runs, fname=where_to_save)
         print 'Session was stored to %s' % where_to_save
         
-    def load_all(self, directory):
-        pass
-#         s = Saver(directory)
-#         self.events = s.load_all()
-#         return self.events[0].id
+    def load_all(self, what_to_load):
+        print what_to_load
+        self.runs = self.saver.load_all(fname=what_to_load)
+        print 'Session was loaded from %s' % what_to_load
+        return self.runs[0].id, self.runs[0].events[0].id
     
     def dump_track(self, run_id, event_id, track_id):
         _, track = self.get_event_and_track(run_id, event_id, track_id)
@@ -283,8 +281,9 @@ class Model():
         density = float(n_hits) / tr.length()
         if density < 1.12 or density > 4.:
             return False
-            
-        if tr.start_point[0] > 14.:
+        
+        start_point = tr.get_start_point()   
+        if start_point[0] > 14.:
             return False
             
         if tr.theta < -0.2 or tr.theta > 0.35:

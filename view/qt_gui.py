@@ -140,7 +140,7 @@ class QtGui(Ui_MainWindow):
         if event is None:
             self.plotWidget.clear()
             return
-        run_id = self.get_selected_run_id()
+        run_id = self.get_selected_run_id(error_dialog=True)
         self.current_event = event
         self.current_events_cache[run_id] = event.id
         points = [(h.x, h.y) for h in event.hits]
@@ -312,9 +312,9 @@ class QtGui(Ui_MainWindow):
         
     def load_session(self):
 #         test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
-        test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/Run25/raw/session"
-        dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly) 
-        self.controller.on_load_session(dirname)
+        test_in_file = 'outdata/test.root'
+        in_file = QtWidgets.QFileDialog.getOpenFileName(self.centralwidget, "Open Directory", test_in_file) 
+        self.controller.on_load_session(in_file[0])
         
     def show_Hough_transform_canvas(self):
         self.analysis_widget.show()
@@ -552,7 +552,8 @@ class QtGui(Ui_MainWindow):
 #         t.setItem(row-1, 0, newItem)
         
     def remove_run(self):
-        self.runs_table_form.RunsTable
+        run_id = self.get_selected_run_id()
+        self.controller.on_remove_run(run_id)
         
     def update_run_table(self, runs):
         t = self.runs_table_form.RunsTable
@@ -596,7 +597,7 @@ class QtGui(Ui_MainWindow):
         event_id = self.current_events_cache.get(run_id)
         self.controller.show_event(run_id, event_id)
 
-
+        
 
 
 

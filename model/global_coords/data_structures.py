@@ -21,6 +21,7 @@ class Run():
 
 
 class Event():
+    # TODO: data_file_path should be deprecated?
     def __init__(self, ev_id, data_file_path):
         self.path = data_file_path
         self.id = ev_id
@@ -157,7 +158,6 @@ class Track():
         self.rho = None
         self.theta = None
         self.R2 = None
-        self.start_point = None
         self.lincoor = []
         self.residuals = []
         self.displayed = True
@@ -167,7 +167,7 @@ class Track():
             try:
                 self.color = get_color(self.id)
             except:
-                self.color = '#00ff00'
+                self.color = ''
         self.parameters = {}
         
     def __repr__(self):
@@ -182,12 +182,15 @@ class Track():
     def int_color(self):
         return int(self.color[1:], 16)
     
+    def color_from_int(self, int_color):
+        self.color = '#%06x' % int_color
+    
     def dump(self):
         dump_str = "Track %d\n" % self.id
         dump_str += "    length = %.2f\n" % self.length()
         dump_str += "    rho    = %.2f\n" % self.rho
         dump_str += "    theta  = %.2f\n" % self.theta
-        dump_str += "    start  = %.2f, %.2f\n" % self.start_point
+        dump_str += "    start  = %.2f, %.2f\n" % self.get_start_point()
         dump_str += "    N_hits = %d\n"   % len(self.hit_indices)
         dump_str += "    R^2    = %.2f\n" % self.R2
         print dump_str
@@ -232,6 +235,12 @@ class Track():
     
     def set_line(self, xs, ys):
         self.line = (xs, ys)
+    
+    def get_start_point(self):
+        return self.line[0][0], self.line[1][0]
+    
+    def get_end_point(self):
+        return self.line[0][1], self.line[1][1]
     
     def has_line(self):
         return self.line is not None and len(self.line) == 2
@@ -285,12 +294,16 @@ class Track():
         self.theta = np.arctan(coeffs[0])
         self.rho = coeffs[1]*np.cos(self.theta)
         
-        xline = [np.amin(hits[:,0]), np.amax(hits[:,0])]
-        yline = [coeffs[1] + coeffs[0]*x for x in xline]
-        self.set_line(xline, yline)
+#         xline = [np.amin(hits[:,0]), np.amax(hits[:,0])]
+#         yline = [coeffs[1] + coeffs[0]*x for x in xline]
+#         self.set_line(xline, yline)
+        self.calculate_parameters(event)
         
-        th = np.arctan(coeffs[0])
+    def calculate_parameters(self, event):
+        th = np.arctan(self.theta)
         rotation_matrix = np.array([[np.cos(th), -np.sin(th)], [np.sin(th), np.cos(th)]])
+        
+        hits = np.array([[event.hits[i].x, event.hits[i].y]  for i in self.hit_indices])
         transformed_hits = hits.dot(rotation_matrix)
 #         self.lincoor = transformed_hits[:,0].tolist()
 #         self.residuals = np.fabs(transformed_hits[:,1]).tolist()
@@ -306,8 +319,10 @@ class Track():
         self.residuals = residuals.tolist()
         self.R2 = np.sum(np.power(residuals, 2)) / len(self.hit_indices)
         first_hit = event.hits[self.hit_indices[0]]
-        self.start_point = (first_hit.x, first_hit.y)
+        last_hit = event.hits[self.hit_indices[-1]]
+        self.set_line((first_hit.x, last_hit.x), (first_hit.y, last_hit.y))
         
+    
 
         
         

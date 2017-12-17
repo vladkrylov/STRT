@@ -120,9 +120,10 @@ class Controller():
         self.model.save_all(save_path)
     
     def on_load_session(self, load_path):
-        first_loaded_event_id = self.model.load_all(load_path)
-        event = self.model.get_event(first_loaded_event_id)
+        run_id, event_id = self.model.load_all(load_path)
+        event = self.model.get_event(run_id, event_id)
         is_first, is_last = self.get_event_first_last(run_id, event)
+        self.view.update_run_table(self.model.runs)
         self.view.update_with_event(event, is_first=is_first, is_last=is_last)
     
     def on_dump_track(self, run_id, event_id, track_id):
@@ -174,6 +175,12 @@ class Controller():
 
     def on_new_run(self, run_name):
         self.model.new_run(run_name)
+        self.view.update_run_table(self.model.runs)
+        
+    def on_remove_run(self, run_id):
+        run = self.model.get_run(run_id)
+        if run in self.model.runs:
+            self.model.runs.remove(run)
         self.view.update_run_table(self.model.runs)
         
     def on_run_name_changed(self, run_id, new_name):
