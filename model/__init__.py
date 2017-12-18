@@ -100,6 +100,12 @@ class Model():
 
     def get_run(self, run_id):
         return filter_by_id(self.runs, run_id)
+    
+    def get_run_by_name(self, run_name):
+        runs = [r for r in self.runs if r.name.lower() == run_name.lower()]
+        if len(runs) -- 0:
+            return None
+        return runs[0]
 
     def get_event_and_track(self, run_id, event_id, track_id):
         event = self.get_event(run_id, event_id)
@@ -111,20 +117,20 @@ class Model():
     def save_all(self, where_to_save):
         self.saver.save_all(self.runs, fname=where_to_save)
         print 'Session was stored to %s' % where_to_save
-        
+
     def load_all(self, what_to_load):
         print what_to_load
         self.runs = self.saver.load_all(fname=what_to_load)
         print 'Session was loaded from %s' % what_to_load
         return self.runs[0].id, self.runs[0].events[0].id
-    
+
     def dump_track(self, run_id, event_id, track_id):
         _, track = self.get_event_and_track(run_id, event_id, track_id)
         track.dump()
-        
+
     def get_track_parameters(self):
         return track_params_dict.keys()
-        
+
     def calculate_track_parameters(self):
         pass
 #         for ev in self.events:
@@ -360,6 +366,14 @@ class Model():
 #             mfile.write('save(Runtracks.mat);\n')
 
     def plot_dEdx(self, run_id, gap, nbins):
+        dN = self.get_dEdx(run_id, gap)
+        fit_Landau(dN, gap)
+        with open('dEdx.txt', 'w') as out_file:
+            out_file.write('gap_length = %f;' % gap)
+            out_file.write('dEdx = %s;' % str(dN))
+            
+    # TODO: dry
+    def get_dEdx(self, run_id, gap):
         run = self.get_run(run_id)
         if run is None:
             return None
@@ -371,10 +385,6 @@ class Model():
                 bin_edges = np.arange(np.amin(t.lincoor), np.amax(t.lincoor), gap)
                 N, _ = np.histogram(t.lincoor, bins=bin_edges)
                 dN = np.concatenate((dN, N))
-        fit_Landau(dN, gap)
-        with open('dEdx.txt', 'w') as out_file:
-            out_file.write('gap_length = %f;' % gap)
-            out_file.write('dEdx = %s;' % str(dN))
-
+        return dN
 
             
