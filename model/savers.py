@@ -121,6 +121,8 @@ class RootSaver():
         id = IntCol()
         event_id = IntCol()
         hit_indices = stl.vector("int")
+        residuals = stl.vector("float")
+        lincoords = stl.vector("float")
         color = IntCol()
         length = FloatCol()
         rho = FloatCol()
@@ -162,8 +164,10 @@ class RootSaver():
                     for track in event.tracks:
                         track_tree.id = track.id
                         track_tree.event_id = track.event_id
-                        for i in track.hit_indices:
-                            track_tree.hit_indices.push_back(i)
+                        for i in range(len(track.hit_indices)):
+                            track_tree.hit_indices.push_back(track.hit_indices[i])
+                            track_tree.residuals.push_back(track.lincoor[i])
+                            track_tree.lincoords.push_back(track.residuals[i])
                         track_tree.color = track.int_color()
                         track_tree.length = track.length()
                         track_tree.rho = track.rho
