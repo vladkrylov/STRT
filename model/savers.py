@@ -2,8 +2,15 @@ import yaml
 import os
 
 import ROOT as r
-from model import Event, Track, Hit
+from model import Run, Event, Track, Hit
+from model.common import generate_run_id, filter_by_id
 from model.color_set import get_color
+
+# import rootpy
+from rootpy.tree import Tree, TreeModel, IntCol, FloatCol
+from rootpy.io import root_open, DoesNotExist
+from rootpy import stl
+from random import gauss
 
 class Saver():
     def __init__(self):
@@ -92,7 +99,7 @@ class YamlSaver():
         props_list.append('length: %.2f' % track.length())
         props_list.append('rho: %.2f' % track.rho)
         props_list.append('theta: %.2f' % track.theta)
-        props_list.append('start: (%.2f, %.2f)' % track.start_point)
+        props_list.append('start: (%.2f, %.2f)' % track.get_start_point())
         props_list.append('N_hits: %d' % len(track.hit_indices))
         props_list.append('R^2: %.2f' % track.R2)
         props_list.append('is_good: %r' % track.is_good)
@@ -102,13 +109,124 @@ class YamlSaver():
 
 
 class RootSaver():
+    class rEvent(TreeModel):
+        id = IntCol()
+        xhits = stl.vector("float")
+        yhits = stl.vector("float")
+        nHits = IntCol()
+        nTracks = IntCol()
+        nGoodTracks = IntCol()
+        
+    class rTrack(TreeModel):
+        id = IntCol()
+        event_id = IntCol()
+        hit_indices = stl.vector("int")
+        residuals = stl.vector("float")
+        lincoords = stl.vector("float")
+        color = IntCol()
+        length = FloatCol()
+        rho = FloatCol()
+        theta = FloatCol()
+        x0 = FloatCol()
+        y0 = FloatCol()
+        x1 = FloatCol()
+        y1 = FloatCol()
+        nHits = IntCol()
+        R2 = FloatCol()
+        is_good = IntCol()
+        
     def __init__(self):
-        self.file = r.TFile( 'Run.root', 'recreate' )
-        self.events_tree = r.TTree( 't1', 'tree with tracks' )
-        self.tracks_tree = r.TTree( 't1', 'tree with tracks' )
-    
-    def save_tracks(self):
         pass
+    
+    def save_all(self, runs, fname='strt_session.root'):
+        with root_open(fname, 'recreate') as root_file:
+#             d1 = root_file.mkdir('Test1')
+#             d1.cd()
+#             ntuple = Ntuple(('a', 'b', 'c'), name="test")
+#             for i in range(20):
+#                 ntuple.Fill(gauss(.5, 1.), gauss(.3, 2.), gauss(13., 42.))
+#             ntuple.write()
+            for run in runs:
+                run_dir = root_file.mkdir(run.name)
+                run_dir.cd()
+                event_tree = Tree('Events', model=RootSaver.rEvent)
+                track_tree = Tree('Tracks', model=RootSaver.rTrack)
+                for event in run.events:
+                    event_tree.id = event.id
+                    for i in range(len(event.hits)):
+                        event_tree.xhits.push_back(event.hits[i].x)
+                        event_tree.yhits.push_back(event.hits[i].y)
+                    event_tree.nHits = len(event.hits)
+                    event_tree.nTracks = len(event.tracks)
+                    event_tree.nGoodTracks = len([t for t in event.tracks if t.is_good])
+                    event_tree.fill(reset=True)
+                    
+                    for track in event.tracks:
+                        track_tree.id = track.id
+                        track_tree.event_id = track.event_id
+                        for i in range(len(track.hit_indices)):
+                            track_tree.hit_indices.push_back(track.hit_indices[i])
+                            track_tree.residuals.push_back(track.lincoor[i])
+                            track_tree.lincoords.push_back(track.residuals[i])
+                        track_tree.color = track.int_color()
+                        track_tree.length = track.length()
+                        track_tree.rho = track.rho
+                        track_tree.theta = track.theta
+                        track_tree.x0 = track.get_start_point()[0]
+                        track_tree.y0 = track.get_start_point()[1]
+                        track_tree.x1 = track.get_end_point()[0]
+                        track_tree.y1 = track.get_end_point()[1]
+                        track_tree.nHits = len(track.hit_indices)
+                        track_tree.R2 = track.R2
+                        track_tree.is_good = track.is_good
+                        track_tree.fill(reset=True)
+                event_tree.write()
+                track_tree.write()
+                
+    def load_all(self, fname='strt_session.root'):
+        full_fname = os.path.abspath(fname)
+        if not os.path.exists(full_fname):
+            print 'File %s does not exists.' % full_fname
+            return
+        runs = []
+        with root_open(full_fname) as root_file:
+            directories = next(root_file.walk())[1]
+            for dir in directories:
+                run_id = generate_run_id(runs)
+                run = Run(run_id, name=dir)
+                event_tree = root_file.Get(dir).Get('Events')
+                track_tree = None
+                try:
+                    track_tree = root_file.Get(dir).Get('Tracks')
+                except DoesNotExist:
+                    pass
+                for event in event_tree:
+                    e = Event(ev_id=event.id, data_file_path='')
+                    for i in range(event.xhits.size()):
+                        h = Hit(event.xhits[i], event.yhits[i])
+                        e.hits.append(h)
+                    run.events.append(e)
+                    
+                current_event = run.events[0]
+                for track in track_tree:
+                    ev_id = track.event_id
+                    if ev_id != current_event.id:
+                        current_event = filter_by_id(run.events, ev_id)
+                    t = Track(ev_id, track.id)
+                    for i in track.hit_indices:
+                        t.hit_indices.append(i)
+                    t.color_from_int(track.color)
+                    t.rho = track.rho
+                    t.theta = track.theta
+                    t.set_line((track.x0, track.x1), (track.y0, track.y1))
+                    t.R2 = track.R2
+                    t.is_good = track.is_good
+                    t.calculate_parameters(current_event)
+                    current_event.tracks.append(t)
+                    
+                runs.append(run)
+        print '%d runs were loaded' % len(runs)
+        return runs
 
 if __name__ == "__main__":
     from model import Event, Track

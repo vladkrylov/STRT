@@ -4,27 +4,43 @@ import numpy as np
 import time
 
 from model.global_coords.data_structures import *
-from savers import YamlSaver as Saver
+from savers import RootSaver as Saver
 from track_parameters import track_params_dict
 from Hough_transform import hough_line_event, Hough_lines_opencv
 from model.analysis import fit_Landau
+from model.common import generate_run_id
 
 class Model():
     def __init__(self):
-        self.events = []
-        self.saver = None
-        
-    def add_event(self, ev):
-        if ev in self.events:
+        self.runs = []
+        self.saver = Saver()
+
+    def new_run(self, run_name):
+        run_id = generate_run_id(self.runs)
+        run = Run(run_id, run_name)
+        if run in self.runs:
+            return None
+        self.runs.append(run)
+        return run_id
+
+    def set_run_name(self, run_id, new_name):
+        run = [r for r in self.runs if r.id == run_id]
+        if len(run) == 0:
+            return
+        run[0].name = new_name
+
+    def add_event(self, run_id, ev):
+        run = self.get_run(run_id)
+        if ev in run.events:
             return False
-        self.events.append(ev)
+        run.events.append(ev)
         return True
-    
+
     def remove_event(self):
         pass
-    
-    def add_track(self, event_id):
-        event = self.get_event(event_id)
+
+    def add_track(self, run_id, event_id):
+        event = self.get_event(run_id, event_id)
         if not event:
             return None
         track_id = self.generate_track_id(event)
@@ -32,16 +48,16 @@ class Model():
                               track_id=track_id, 
                               track_type="selected"))
         return True
-    
-    def remove_track(self, event_id, track_id):
-        event, track = self.get_event_and_track(event_id, track_id)
+
+    def remove_track(self, run_id, event_id, track_id):
+        event, track = self.get_event_and_track(run_id, event_id, track_id)
         if not track or not event:
             return False
         event.tracks.remove(track)
         return True
-        
-    def add_hits(self, event_id, track_id, hit_indices):
-        event, track = self.get_event_and_track(event_id, track_id)
+
+    def add_hits(self, run_id, event_id, track_id, hit_indices):
+        event, track = self.get_event_and_track(run_id, event_id, track_id)
         if not track or not event:
             return False
         if not event.hit_indices_are_valid(hit_indices):
@@ -55,8 +71,8 @@ class Model():
         event.tracks[track_index] = track
         return True
     
-    def remove_hits(self, event_id, track_id, hit_indices):
-        event, track = self.get_event_and_track(event_id, track_id)
+    def remove_hits(self, run_id, event_id, track_id, hit_indices):
+        event, track = self.get_event_and_track(run_id, event_id, track_id)
         if not track or not event:
             return False
         if not event.hit_indices_are_valid(hit_indices):
@@ -70,69 +86,84 @@ class Model():
         event.tracks[track_index] = track
         return True
     
-    def get_event(self, event_id):
-        return filter_by_id(self.events, event_id)
+    def get_event(self, run_id, event_id):
+        run = self.get_run(run_id)
+        if run is None or len(run.events) == 0:
+            return None
+        return filter_by_id(run.events, event_id) or run.events[0]
         
-    def generate_track_id(self, event):
-        existing_ids = [tr.id for tr in event.tracks]
-        if len(existing_ids) == 0:
-            return 0
-        return max(existing_ids) + 1 
-        
-    def get_event_and_track(self, event_id, track_id):
-        event = self.get_event(event_id)
+#     def generate_track_id(self, event):
+#         existing_ids = [tr.id for tr in event.tracks]
+#         if len(existing_ids) == 0:
+#             return 0
+#         return max(existing_ids) + 1 
+
+    def get_run(self, run_id):
+        return filter_by_id(self.runs, run_id)
+    
+    def get_run_by_name(self, run_name):
+        runs = [r for r in self.runs if r.name.lower() == run_name.lower()]
+        if len(runs) -- 0:
+            return None
+        return runs[0]
+
+    def get_event_and_track(self, run_id, event_id, track_id):
+        event = self.get_event(run_id, event_id)
         track = None
         if event:
             track = filter_by_id(event.tracks, track_id)
         return event, track
-        
-    def save_all(self, directory):
-        s = Saver(directory)
-        s.save_all(self.events)
-        
-    def load_all(self, directory):
-        s = Saver(directory)
-        self.events = s.load_all()
-        return self.events[0].id
-    
-    def dump_track(self, event_id, track_id):
-        _, track = self.get_event_and_track(event_id, track_id)
+
+    def save_all(self, where_to_save):
+        self.saver.save_all(self.runs, fname=where_to_save)
+        print 'Session was stored to %s' % where_to_save
+
+    def load_all(self, what_to_load):
+        print what_to_load
+        self.runs = self.saver.load_all(fname=what_to_load)
+        print 'Session was loaded from %s' % what_to_load
+        return self.runs[0].id, self.runs[0].events[0].id
+
+    def dump_track(self, run_id, event_id, track_id):
+        _, track = self.get_event_and_track(run_id, event_id, track_id)
         track.dump()
-        
+
     def get_track_parameters(self):
         return track_params_dict.keys()
-        
+
     def calculate_track_parameters(self):
-        for ev in self.events:
-            for tr in ev.tracks:
-                for par_name, calc_function in track_params_dict.iteritems():
-                    tr.parameters[par_name] = calc_function(tr, ev)
+        pass
+#         for ev in self.events:
+#             for tr in ev.tracks:
+#                 for par_name, calc_function in track_params_dict.iteritems():
+#                     tr.parameters[par_name] = calc_function(tr, ev)
     
-    def get_param_distribution(self, parameter_name):
-        return [tr.parameters.get(parameter_name) for ev in self.events 
-                                                  for tr in ev.tracks]
+#     def get_param_distribution(self, parameter_name):
+#         return [tr.parameters.get(parameter_name) for ev in self.events 
+#                                                   for tr in ev.tracks]
         
-    def Hough_transform(self, event_id, track_id=None):
-        event = self.get_event(event_id)
+    def Hough_transform(self, run_id, event_id, track_id=None):
+        event = self.get_event(run_id, event_id)
         _, HT, _, _ = hough_line_event(event, track_id)
         lines = []
         return HT, lines
     
-    def analyze_all(self, parameters):
+    def analyze_all(self, run_id, parameters):
+        run = self.get_run(run_id)
         start = time.time()
         n_tracks = 0
-        for ev in self.events:
-            self.fast_Hough_transform(ev.id, parameters)
+        for ev in run.events:
+            self.fast_Hough_transform(run_id, ev.id, parameters)
             n_tracks += len(ev.tracks)
         end = time.time()
         print "============ Reconstruction performance ============="
-        print "    %d events analyzed" % len(self.events)
+        print "    %d events analyzed" % len(run.events)
         print "    %d tracks found" % n_tracks
         print "    time elapsed: %.1f seconds" % (end - start)
         
-    def fast_Hough_transform(self, event_id, parameters):
+    def fast_Hough_transform(self, run_id, event_id, parameters):
         print "Processing event %d" % event_id
-        event = self.get_event(event_id)
+        event = self.get_event(run_id, event_id)
         ########## Pre-HT filters ############
         nhits = len(event.hits)
         if nhits < 50 or nhits > 1600:
@@ -143,7 +174,6 @@ class Model():
         event.reconstructed_hit_indices = []
         for i_Hough in range(4):
             Hough_lines_opencv(event, parameters)
-            # insert loop here
             for _ in range(5):
                 self.filter_close_tracks(event)
                 for t in event.tracks:
@@ -242,8 +272,8 @@ class Model():
             event.add_track(t)
 #         print "Track %d has %d subtracks" % (track.id, len(subtracks))
 
-    def mark_good_track(self, event_id, track_id, is_good):
-        _, track = self.get_event_and_track(event_id, track_id)
+    def mark_good_track(self, run_id, event_id, track_id, is_good):
+        _, track = self.get_event_and_track(run_id, event_id, track_id)
         track.is_good = is_good
         
     def track_is_good(self, tr):
@@ -257,8 +287,9 @@ class Model():
         density = float(n_hits) / tr.length()
         if density < 1.12 or density > 4.:
             return False
-            
-        if tr.start_point[0] > 14.:
+        
+        start_point = tr.get_start_point()   
+        if start_point[0] > 14.:
             return False
             
         if tr.theta < -0.2 or tr.theta > 0.35:
@@ -267,86 +298,93 @@ class Model():
         if tr.rho < 55. or tr.theta > 0.35 \
         or (tr.rho > 69.5 and tr.rho < 77.8):
             return False
-            
+        
         return True
+
+    def dump2matlab(self, run_id):
+        pass
+#         '''Exports reconstructed tracks sttistics to the Matlab file for producing a nice plots.
+#         The same should be done using Matplolib in future.
+#         '''
+#         print "Matlab dump"
+#         with open('STRT_matlab.m', 'w') as mfile:
+#             mfile.write('clear all;\n')
+#             mfile.write('good_tracks_length = %s;\n'
+#                         % str([t.length() for ev in self.events for t in ev.tracks
+#                                           if t.is_good]))
+#             mfile.write('bad_tracks_length = %s;\n'
+#                         % str([t.length() for ev in self.events for t in ev.tracks
+#                                           if not t.is_good]))
+#             mfile.write('good_tracks_rho = %s;\n'
+#                         % str([t.rho for ev in self.events for t in ev.tracks
+#                                      if t.is_good]))
+#             mfile.write('bad_tracks_rho = %s;\n'
+#                         % str([t.rho for ev in self.events for t in ev.tracks
+#                                      if not t.is_good]))
+#             mfile.write('good_tracks_theta = %s;\n'
+#                         % str([t.theta for ev in self.events for t in ev.tracks
+#                                        if t.is_good]))
+#             mfile.write('bad_tracks_theta = %s;\n'
+#                         % str([t.theta for ev in self.events for t in ev.tracks
+#                                        if not t.is_good]))
+#             mfile.write('good_tracks_x0 = %s;\n'
+#                         % str([t.start_point[0] for ev in self.events for t in ev.tracks
+#                                                 if t.is_good]))
+#             mfile.write('bad_tracks_x0 = %s;\n'
+#                         % str([t.start_point[0] for ev in self.events for t in ev.tracks
+#                                                 if not t.is_good]))
+#             mfile.write('good_tracks_y0 = %s;\n'
+#                         % str([t.start_point[1] for ev in self.events for t in ev.tracks
+#                                                 if t.is_good]))
+#             mfile.write('bad_tracks_y0 = %s;\n'
+#                         % str([t.start_point[1] for ev in self.events for t in ev.tracks
+#                                                 if not t.is_good]))
+#             good_tracks_Nhits = [len(t.hit_indices) for ev in self.events for t in ev.tracks
+#                                                     if t.is_good]
+#             mfile.write('good_tracks_Nhits = %s;\n' % str(good_tracks_Nhits))
+#             mfile.write('bad_tracks_Nhits = %s;\n'
+#                         % str([len(t.hit_indices) for ev in self.events for t in ev.tracks
+#                                                   if not t.is_good]))
+#             mfile.write('good_tracks_R2 = %s;\n'
+#                         % str([t.R2 for ev in self.events for t in ev.tracks
+#                                     if t.is_good]))
+#             mfile.write('bad_tracks_R2 = %s;\n'
+#                         % str([t.R2 for ev in self.events for t in ev.tracks
+#                                     if not t.is_good]))
+#             n_good_tracks = len(good_tracks_Nhits)
+#             max_N_hits = max(good_tracks_Nhits)
+#             mfile.write('lincoords = NaN(%d, %d);\n' % (n_good_tracks, max_N_hits))
+#             tracks_counter = 0
+#             for ev in self.events:
+#                 for t in ev.tracks:
+#                     if t.is_good:
+#                         tracks_counter += 1
+#                         mfile.write('lincoords(%d, 1:%d) = %s;\n' % (tracks_counter,
+#                                                                      len(t.hit_indices),
+#                                                                      str(t.lincoor))
+#                                     )
+#             mfile.write('save(Runtracks.mat);\n')
+
+    def plot_dEdx(self, run_id, gap, nbins):
+        dN = self.get_dEdx(run_id, gap)
+        fit_Landau(dN, gap)
+        with open('dEdx.txt', 'w') as out_file:
+            out_file.write('gap_length = %f;' % gap)
+            out_file.write('dEdx = %s;' % str(dN))
             
-
-    def dump2matlab(self):
-        '''Exports reconstructed tracks sttistics to the Matlab file for producing a nice plots.
-        The same should be done using Matplolib in future.
-        '''
-        print "Matlab dump"
-        with open('STRT_matlab.m', 'w') as mfile:
-            mfile.write('clear all;\n')
-            mfile.write('good_tracks_length = %s;\n'
-                        % str([t.length() for ev in self.events for t in ev.tracks
-                                          if t.is_good]))
-            mfile.write('bad_tracks_length = %s;\n'
-                        % str([t.length() for ev in self.events for t in ev.tracks
-                                          if not t.is_good]))
-            mfile.write('good_tracks_rho = %s;\n'
-                        % str([t.rho for ev in self.events for t in ev.tracks
-                                     if t.is_good]))
-            mfile.write('bad_tracks_rho = %s;\n'
-                        % str([t.rho for ev in self.events for t in ev.tracks
-                                     if not t.is_good]))
-            mfile.write('good_tracks_theta = %s;\n'
-                        % str([t.theta for ev in self.events for t in ev.tracks
-                                       if t.is_good]))
-            mfile.write('bad_tracks_theta = %s;\n'
-                        % str([t.theta for ev in self.events for t in ev.tracks
-                                       if not t.is_good]))
-            mfile.write('good_tracks_x0 = %s;\n'
-                        % str([t.start_point[0] for ev in self.events for t in ev.tracks
-                                                if t.is_good]))
-            mfile.write('bad_tracks_x0 = %s;\n'
-                        % str([t.start_point[0] for ev in self.events for t in ev.tracks
-                                                if not t.is_good]))
-            mfile.write('good_tracks_y0 = %s;\n'
-                        % str([t.start_point[1] for ev in self.events for t in ev.tracks
-                                                if t.is_good]))
-            mfile.write('bad_tracks_y0 = %s;\n'
-                        % str([t.start_point[1] for ev in self.events for t in ev.tracks
-                                                if not t.is_good]))
-            good_tracks_Nhits = [len(t.hit_indices) for ev in self.events for t in ev.tracks
-                                                    if t.is_good]
-            mfile.write('good_tracks_Nhits = %s;\n' % str(good_tracks_Nhits))
-            mfile.write('bad_tracks_Nhits = %s;\n'
-                        % str([len(t.hit_indices) for ev in self.events for t in ev.tracks
-                                                  if not t.is_good]))
-            mfile.write('good_tracks_R2 = %s;\n'
-                        % str([t.R2 for ev in self.events for t in ev.tracks
-                                    if t.is_good]))
-            mfile.write('bad_tracks_R2 = %s;\n'
-                        % str([t.R2 for ev in self.events for t in ev.tracks
-                                    if not t.is_good]))
-            n_good_tracks = len(good_tracks_Nhits)
-            max_N_hits = max(good_tracks_Nhits)
-            mfile.write('lincoords = NaN(%d, %d);\n' % (n_good_tracks, max_N_hits))
-            tracks_counter = 0
-            for ev in self.events:
-                for t in ev.tracks:
-                    if t.is_good:
-                        tracks_counter += 1
-                        mfile.write('lincoords(%d, 1:%d) = %s;\n' % (tracks_counter,
-                                                                     len(t.hit_indices),
-                                                                     str(t.lincoor))
-                                    )
-            mfile.write('save(Runtracks.mat);\n')
-
-    def plot_dEdx(self, gap, nbins):
+    # TODO: dry
+    def get_dEdx(self, run_id, gap):
+        run = self.get_run(run_id)
+        if run is None:
+            return None
         dN = np.array([])
-        for ev in self.events:
+        for ev in run.events:
             for t in ev.tracks:
                 if not t.is_good:
                     continue
                 bin_edges = np.arange(np.amin(t.lincoor), np.amax(t.lincoor), gap)
                 N, _ = np.histogram(t.lincoor, bins=bin_edges)
                 dN = np.concatenate((dN, N))
-        fit_Landau(dN, gap)
-        with open('dEdx.txt', 'w') as out_file:
-            out_file.write('gap_length = %f;' % gap)
-            out_file.write('dEdx = %s;' % str(dN))
-
+        return dN
 
             

@@ -7,15 +7,19 @@ from view.qt_track_representation import TrackRepresentation
 from lasso_manager import LassoManager
 from tracks_parameters import Ui_DockWidget as analysis_form
 from fasthough import Ui_DockWidget as fastHT_form
+from runs_table import Ui_DockWidget as runs_table_form
 from matplotlib.backends.backend_pdf import PdfPages
 
 class QtGui(Ui_MainWindow):
     def __init__(self):
         super(QtGui, self).__init__()
+        self.run_ids = []
+        self.current_run = None
         self.current_event = None
         self.tracks = []
         self.Houghlines = []
         self.hits_selection_is_on = None
+        self.current_events_cache = {}  # run_id: current_event_id
         
     def setupUi(self, MainWindow):
         Ui_MainWindow.setupUi(self, MainWindow)
@@ -28,8 +32,16 @@ class QtGui(Ui_MainWindow):
         self.analysis_form.setupUi(self.analysis_widget)
         MainWindow.addDockWidget(QtCore.Qt.BottomDockWidgetArea, self.analysis_widget)
         self.analysis_widget.hide()
+        #
+        self.runs_table_widget = QtWidgets.QDockWidget(MainWindow)
+        self.runs_table_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Maximum)
+        self.runs_table_form = runs_table_form()
+        self.runs_table_form.setupUi(self.runs_table_widget)
+        self.prepare_runs_table()
+        MainWindow.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.runs_table_widget)
         # 
         self.fastHT_widget = QtWidgets.QDockWidget(MainWindow)
+        self.runs_table_widget.setSizePolicy(QtWidgets.QSizePolicy.Maximum, QtWidgets.QSizePolicy.Expanding)
         self.fastHT_form = fastHT_form()
         self.fastHT_form.setupUi(self.fastHT_widget)
         MainWindow.addDockWidget(QtCore.Qt.LeftDockWidgetArea, self.fastHT_widget)
@@ -69,7 +81,30 @@ class QtGui(Ui_MainWindow):
         #
         self.fastHT_form.reconstructAllButton.clicked.connect(self.reconstruct_all)
         self.fastHT_form.findLinesButton.clicked.connect(self.fast_Hough_lines)
+        #
+        self.runs_table_form.AddRunButton.clicked.connect(self.add_run)
+        self.runs_table_form.RemoveRunButton.clicked.connect(self.remove_run)
+        self.runs_table_form.RunsTable.cellChanged.connect(self.run_name_changed)
+        self.runs_table_form.RunsTable.currentCellChanged.connect(self.new_run_selected)
     
+    def message_to_user(self, mtype, text1, text2=None, text3=None):
+        msg = QtWidgets.QMessageBox()
+        msg.setIcon(mtype)
+        msg.setText(text1)
+        if text2:
+            msg.setInformativeText(text2)
+#         msg.setWindowTitle("MessageBox demo")
+        if text3:
+            msg.setDetailedText(text3)
+        msg.setStandardButtons(QtWidgets.QMessageBox.Ok)
+        msg.exec_()
+        
+    def info_message(self, text1, text2=None, text3=None):
+        self.message_to_user(QtWidgets.QMessageBox.Information, text1, text2, text3)
+    
+    def error_message(self, text1, text2=None, text3=None):
+        self.message_to_user(QtWidgets.QMessageBox.Error, text1, text2, text3)
+        
     def add_listener(self, controller):
         self.controller = controller
         # track parameters list initialization
@@ -94,12 +129,20 @@ class QtGui(Ui_MainWindow):
         self.add_binning_toolbar()
     
     def load_new_event(self):
-        test_file_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/indata/Run25"
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
+        test_file_path = "indata/Run25"
         filenames = QtWidgets.QFileDialog.getOpenFileNames(self.centralwidget, "QFileDialog.getOpenFileNames()", test_file_path, "All Files (*)")
-        self.controller.on_load_events(filenames[0])
+        self.controller.on_load_events(run_id, filenames[0])
     
     def update_with_event(self, event, is_first=False, is_last=False):
+        if event is None:
+            self.plotWidget.clear()
+            return
+        run_id = self.get_selected_run_id(error_dialog=True)
         self.current_event = event
+        self.current_events_cache[run_id] = event.id
         points = [(h.x, h.y) for h in event.hits]
         x = map(lambda point: point[0], points)
         y = map(lambda point: point[1], points)
@@ -158,14 +201,20 @@ class QtGui(Ui_MainWindow):
         self.statusBar.showMessage(str(event))
     
     def prev_event(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if self.current_event is None:
             return
-        self.controller.on_show_previous_event(self.current_event)
+        self.controller.on_show_previous_event(run_id, self.current_event)
     
     def next_event(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if self.current_event is None:
             return
-        self.controller.on_show_next_event(self.current_event)
+        self.controller.on_show_next_event(run_id, self.current_event)
     
     def add_new_track(self):
         if self.current_event is None:
@@ -178,6 +227,9 @@ class QtGui(Ui_MainWindow):
         self.controller.on_remove_track(0)
         
     def on_pick(self, mouse_event):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         if len(self.tracks) == 0:
             return
         if mouse_event.artist not in [t.line for t in self.tracks]:
@@ -188,7 +240,7 @@ class QtGui(Ui_MainWindow):
             if t.line == mouse_event.artist and not t.is_selected:
                 # t was not selected before, but now it is picked
                 t.select()
-                self.controller.on_dump_track(self.current_event.id, t.track.id)
+                self.controller.on_dump_track(run_id, self.current_event.id, t.track.id)
             elif t.line == mouse_event.artist and t.is_selected:
                 # t was selected before and now it is picked again, do nothing with it
                 pass
@@ -251,15 +303,18 @@ class QtGui(Ui_MainWindow):
             self.controller.on_remove_hits(event_id, track_id, indices)
         
     def save_session(self):
-        test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
-        dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly ) 
-        self.controller.on_save_session(dirname)
+#         test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
+#         dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly ) 
+#         self.controller.on_save_session(dirname)
+#         out_file = QtWidgets.QFileDialog.getSaveFileName(self.centralwidget)
+        out_file = 'outdata/test.root'
+        self.controller.on_save_session(out_file)
         
     def load_session(self):
 #         test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/STRT/outdata/Run25"
-        test_dir_path = "/home/vlad/Program_Files/ilcsoft/marlintpc/workspace/Run25/raw/session"
-        dirname = QtWidgets.QFileDialog.getExistingDirectory(self.centralwidget, "Open Directory", test_dir_path, QtWidgets.QFileDialog.ShowDirsOnly) 
-        self.controller.on_load_session(dirname)
+        test_in_file = 'outdata/test.root'
+        in_file = QtWidgets.QFileDialog.getOpenFileName(self.centralwidget, "Open Directory", test_in_file) 
+        self.controller.on_load_session(in_file[0])
         
     def show_Hough_transform_canvas(self):
         self.analysis_widget.show()
@@ -419,45 +474,130 @@ class QtGui(Ui_MainWindow):
             self.Houghlines = []
 
     def fast_Hough_lines(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
-        self.controller.on_event_fast_Hough_transform(self.current_event.id, parameters)
+        self.controller.on_event_fast_Hough_transform(run_id, self.current_event.id, parameters)
 
     def reconstruct_all(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
-        self.controller.on_reconstruct_all_events(parameters)
+        self.controller.on_reconstruct_all_events(run_id, parameters)
 
     def save_pdf(self):
         fname = 'STRT_Event%d.pdf' % self.current_event.id
         with PdfPages(fname) as pdf:
             pdf.savefig(self.plotWidget.figure)
             print "%s was created." % fname
-            
+
     def save_all_pdf(self):
         self.controller.on_save_all_pdf()
 
     def good_track(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         selected = [t for t in self.tracks if t.is_selected]
         if len(selected) > 0:
             selected[0].hits.set_marker('^')
             self.plotWidget.draw()
             track_id = selected[0].track.id
-            self.controller.mark_good_track(self.current_event.id, track_id, is_good=True)
+            self.controller.mark_good_track(run_id, self.current_event.id, track_id, is_good=True)
 
     def bad_track(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         selected = [t for t in self.tracks if t.is_selected]
         if len(selected) > 0:
             selected[0].hits.set_marker('o')
             self.plotWidget.draw()
             track_id = selected[0].track.id
-            self.controller.mark_good_track(self.current_event.id, track_id, is_good=False)
+            self.controller.mark_good_track(run_id, self.current_event.id, track_id, is_good=False)
         
     def export_to_matlab(self):
-        self.controller.export_to_matlab()
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
+        self.controller.export_to_matlab(run_id)
 
     def plot_dEdx(self):
+        run_id = self.get_selected_run_id()
+        if run_id is None:
+            return
         parameters = self.fastHT_form.get_params()
         gap = parameters.get('gap_length')
         nbins = parameters.get('nbins_dEdx')
-        self.controller.on_plot_dEdx(gap, nbins)
+        self.controller.on_plot_dEdx(run_id, gap, nbins)
+        
+    def prepare_runs_table(self):
+        t = self.runs_table_form.RunsTable
+        t.setRowCount(0)
+        t.setColumnCount(1)
+        t.horizontalHeader().setStretchLastSection(True)
+        t.setHorizontalHeaderLabels(["Run title"])
+
+    def add_run(self):
+        t = self.runs_table_form.RunsTable
+        run_name = 'New run %d' % (t.rowCount() + 1)
+        run_name = run_name.replace(' ', '_')
+        self.controller.on_new_run(run_name)
+#         t = self.runs_table_form.RunsTable
+#         row = t.rowCount() + 1
+#         newItem = QtWidgets.QTableWidgetItem('New run %d' % row)
+#         t.setRowCount(row)
+#         t.setItem(row-1, 0, newItem)
+        
+    def remove_run(self):
+        run_id = self.get_selected_run_id()
+        self.controller.on_remove_run(run_id)
+        
+    def update_run_table(self, runs):
+        t = self.runs_table_form.RunsTable
+        n_runs = len(runs)
+        t.setRowCount(n_runs)
+        for i in range(n_runs):
+            newItem = QtWidgets.QTableWidgetItem(runs[i].name)
+            t.setItem(i, 0, newItem)
+        self.run_ids = [run.id for run in runs]
+        print [run.name for run in runs]
+        
+    def get_selected_run_index(self, error_dialog=True):
+        '''Returns a index of selected run in the runs table'''
+        t = self.runs_table_form.RunsTable
+        selected_runs = [index.row() for index in t.selectedIndexes()]
+        if len(selected_runs) == 0:
+            if error_dialog:
+                self.info_message('Please, select a Run from the table to assign the events.')
+            return None
+        return selected_runs[0]
+    
+    def get_selected_run_id(self, error_dialog=True):
+        '''Returns an id of selected run'''
+        run_index = self.get_selected_run_index(error_dialog=error_dialog)
+        if run_index is None:
+            return None
+        return self.run_ids[run_index]
+            
+    def run_name_changed(self):
+        run_index = self.get_selected_run_index(error_dialog=False)
+        if run_index is None:
+            return
+        t = self.runs_table_form.RunsTable
+        run_id = self.run_ids[run_index]
+        new_name = t.item(run_index, 0).text()
+        self.controller.on_run_name_changed(run_id, new_name)
+        
+    def new_run_selected(self, currentRow, currentColumn, previousRow, previousColumn):
+        run_index = currentRow
+        run_id = self.run_ids[run_index]
+        event_id = self.current_events_cache.get(run_id)
+        self.controller.show_event(run_id, event_id)
+
+        
+
 
 
